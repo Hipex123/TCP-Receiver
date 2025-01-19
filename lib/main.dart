@@ -1,10 +1,44 @@
 // ignore_for_file: prefer_const_constructors
 
 import "package:flutter/material.dart";
+import "dart:io";
+
+String serverData = "";
+bool isConnected = true;
 
 void main() => runApp(MaterialApp(
       home: App(),
     ));
+
+connect(String ip, int port) async {
+  try {
+    print("Connecting to server...");
+    final socket = await Socket.connect(ip, port);
+    print("Connected to server!");
+
+    socket.write("CONNECTED|PH0NE");
+
+    socket.listen(
+      (data) {
+        //print("Server response: ${String.fromCharCodes(data)}");
+        serverData += "\n" + String.fromCharCodes(data);
+        if (!isConnected) {
+          print("Closing connection...");
+          socket.close();
+        }
+      },
+      onDone: () {
+        print("Server closed the connection.");
+      },
+      onError: (error) {
+        print("Error: $error");
+        socket.close();
+      },
+    );
+  } catch (e) {
+    print("Connection failed: $e");
+  }
+}
 
 class App extends StatefulWidget {
   @override
@@ -22,7 +56,7 @@ class AppState extends State<App> {
         DynamicButton(
           label: serverName,
           onPressed: () {
-            print("Button ${dynamicButtons.length + 1} pressed");
+            connect(ip, port);
           },
         ),
       );
@@ -102,9 +136,31 @@ class AppState extends State<App> {
           backgroundColor: Colors.grey[900],
         ),
         body: SingleChildScrollView(
-          child: Column(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             // ignore: prefer_const_literals_to_create_immutables
-            children: dynamicButtons,
+            children: [
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: dynamicButtons,
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  color: Colors.grey[200],
+                  child: Text(
+                    serverData,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              )
+            ],
           ),
         ),
         floatingActionButton: FloatingActionButton(
